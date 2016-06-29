@@ -31,6 +31,8 @@ import scipy.optimize as optimize
 from scipy.odr import odrpack as odr
 from scipy.odr import models
 from scipy.ndimage.measurements import center_of_mass
+import statsmodels.api as smapi
+from statsmodels.formula.api import ols
 
 from .. import config
 from .. import math
@@ -143,7 +145,11 @@ def psd_chdeg(angles, channels, stdev=None, usetilt=True, plot=True,
                                numpy.sin(rad - p2)])
         r.shape = (3,) + x.shape
         return r
-
+    # perform linear fit and find outliers
+    regression = ols("angles ~ channels", data=(dict(data=channels, x=angles))).fit()
+    test = regression.outlier_test()
+    outliers = ((x[i],y[i]) for i,t in enumerate(test.icol(2)) if t < 0.5)
+    print 'Outliers: ', list(outliers)
     # fit linear
     model = models.unilinear
     data = odr.RealData(angles, channels, sy=stdevu)
